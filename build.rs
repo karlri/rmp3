@@ -3,6 +3,23 @@ fn main() {
     let mut build = cc::Build::new();
 
     build.include("ffi/minimp3");
+    build.flag("-fPIC");
+    build.flag("-O2");
+    // xtensa architecture:
+    // need to pass -mlongcalls to linker, or link errors like
+    // dangerous relocation: call8: call target out of range
+    // we can only pass flags to linker with CFLAGS env var.
+    // https://gcc.gnu.org/onlinedocs/gcc/Xtensa-Options.html search -mlongcalls
+    if std::env::var("CARGO_CFG_TARGET_ARCH").unwrap() == "xtensa" {
+        let mut cflags = std::env::var("CFLAGS").unwrap_or(String::new());
+        if !cflags.contains("-mlongcalls") {
+            if !cflags.ends_with(' ') {
+                cflags.push(' ');
+            }
+            cflags.push_str("-mlongcalls");
+            std::env::set_var("CFLAGS", cflags);
+        }
+    }
 
     if cfg!(feature = "float") {
         build.define("MINIMP3_FLOAT_OUTPUT", None);

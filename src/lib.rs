@@ -32,14 +32,13 @@
 //! See individual documentation on [`Decoder`] and [`RawDecoder`] for more examples.
 
 #![deny(missing_docs)]
-
 #![cfg_attr(feature = "nightly-docs", feature(doc_cfg))]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #[doc(hidden)]
 pub mod ffi;
 
-use core::{marker::PhantomData, mem::{MaybeUninit}, num::NonZeroUsize, ptr};
+use core::{marker::PhantomData, mem::MaybeUninit, num::NonZeroUsize, ptr};
 use libc::c_int;
 
 #[cfg(feature = "std")]
@@ -277,9 +276,7 @@ impl DecoderOwned<Vec<u8>> {
 
         // SAFETY: All functions decay all 'static to 'a as in `&'a self`,
         // and the `Vec` is not moved, reallocated, or dropped until the entire struct is.
-        let self_reference = unsafe {
-            std::mem::transmute::<_, &'static [u8]>(source.as_slice())
-        };
+        let self_reference = unsafe { std::mem::transmute::<_, &'static [u8]>(source.as_slice()) };
 
         Self {
             decoder: Decoder::new(self_reference),
@@ -404,14 +401,15 @@ impl RawDecoder {
         let src_length = data_len_safe(src.len());
         let dest_ptr: *mut Sample = dest.map_or(ptr::null_mut(), |x| x).cast();
         unsafe {
-            let mut info = MaybeUninit::uninit().assume_init();
+            let mut info = MaybeUninit::uninit();
             let result = ffi::mp3dec_decode_frame(
                 self.0.as_mut_ptr(),
                 src.as_ptr(),
                 src_length,
                 dest_ptr,
-                &mut info,
+                info.as_mut_ptr(),
             );
+            let info = info.assume_init();
             let skip = info.frame_bytes as usize;
 
             if result != 0 {
